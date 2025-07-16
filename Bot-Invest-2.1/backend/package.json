@@ -1,0 +1,14 @@
+{
+  "dependencies": {
+    "binance-api-node": "^0.12.9",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "jest": "^30.0.4"
+  },
+  "scripts": {
+    "test": "jest"
+  }
+}

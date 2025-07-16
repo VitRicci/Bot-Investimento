@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Painel Binance Testnet</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      background: #020024;
+      background: linear-gradient(90deg, rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%);
+      color: #222;
+    }
+    .container {
+      max-width: 900px;
+      margin: 30px auto;
+      background: rgba(255,255,255,0.85); /* semi-transparent */
+      border-radius: 12px;
+      box-shadow: 0 2px 12px #0001;
+      padding: 32px 36px 24px 36px;
+    }
+    h2 {
+      margin-top: 0;
+      color: #1976d2;
+      letter-spacing: 1px;
+    }
+    .painel {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .painel label {
+      font-weight: 500;
+    }
+    .painel input {
+      margin-left: 4px;
+      margin-right: 12px;
+      padding: 4px 8px;
+      border: 1px solid #bbb;
+      border-radius: 4px;
+      width: 100px;
+    }
+    .btn {
+      padding: 6px 18px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 1em;
+      transition: background 0.2s;
+    }
+    .btn-compra {
+      background: #1976d2;
+      color: #fff;
+    }
+    .btn-compra:hover {
+      background: #1565c0;
+    }
+    .btn-venda {
+      background: #c62828;
+      color: #fff;
+    }
+    .btn-venda:hover {
+      background: #b71c1c;
+    }
+    .painel-info {
+      display: flex;
+      gap: 32px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+    .info-bloco {
+      background: #e3f2fd;
+      border-radius: 8px;
+      padding: 14px 22px;
+      min-width: 180px;
+      text-align: center;
+      box-shadow: 0 1px 4px #0001;
+    }
+    .info-bloco strong {
+      font-size: 1.3em;
+      color: #1976d2;
+      display: block;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-bottom: 18px;
+      background: #fafbfc;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px #0001;
+    }
+    th, td {
+      border: 1px solid #e0e0e0;
+      padding: 7px 10px;
+      text-align: center;
+    }
+    th {
+      background: #e3f2fd;
+      color: #1976d2;
+      font-weight: 600;
+    }
+    .mensagem {
+      margin: 12px 0 18px 0;
+      padding: 10px 16px;
+      border-radius: 6px;
+      background: #fffde7;
+      color: #bfa000;
+      font-weight: 500;
+      min-height: 24px;
+      box-shadow: 0 1px 4px #0001;
+    }
+    .ativo {
+      color: #388e3c;
+      font-weight: bold;
+    }
+    .inativo {
+      color: #c62828;
+      font-weight: bold;
+    }
+    .slider-popup {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .slider-box {
+      background: #fff;
+      border-radius: 10px;
+      padding: 32px 28px 24px 28px;
+      box-shadow: 0 2px 16px #0002;
+      min-width: 320px;
+      text-align: center;
+      position: relative;
+    }
+    .slider-box h3 {
+      margin-top: 0;
+      color: #1976d2;
+    }
+    .slider {
+      width: 90%;
+      margin: 18px 0 10px 0;
+    }
+    .slider-value {
+      font-size: 1.2em;
+      color: #1976d2;
+      font-weight: bold;
+      margin-bottom: 10px;
+      display: block;
+    }
+    .close-slider {
+      position: absolute;
+      top: 10px; right: 16px;
+      background: none;
+      border: none;
+      font-size: 1.3em;
+      color: #888;
+      cursor: pointer;
+    }
+    @media (max-width: 700px) {
+      .container { padding: 10px; }
+      .painel-info { flex-direction: column; gap: 10px; }
+      .painel { flex-direction: column; gap: 10px; }
+      .slider-box { min-width: 90vw; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Painel Binance Testnet</h2>
+
+    <div class="painel">
+      <label>Par (ex: BTCUSDT): <input id="symbol" value="BTCUSDT"></label>
+      <label>Quantidade: <input id="quantity" value="0.001"></label>
+      <button class="btn btn-compra" onclick="comprar()">Comprar</button>
+      <button class="btn btn-venda" onclick="vender()">Vender</button>
+    </div>
+
+    <div class="painel-info">
+      <div class="info-bloco">
+        <span>Saldo total (USDT)</span>
+        <strong id="saldo-usdt">--</strong>
+      </div>
+      <div class="info-bloco">
+        <span>Ativos com saldo</span>
+        <strong id="ativos-qtd">--</strong>
+      </div>
+      <div class="info-bloco">
+        <span>Bot Status</span>
+        <strong id="bot-status" class="inativo">Desconhecido</strong>
+      </div>
+    </div>
+
+    <div class="mensagem" id="mensagem"></div>
+
+    <!-- Painel do bot sem selector de pares -->
+    <div class="painel" style="flex-wrap: wrap;">
+      <label for="acoes-select">Ações:</label>
+      <select id="acoes-select" multiple style="width:180px; height:80px;" aria-label="Selecione os pares" required>
+        <option value="BTCUSDT">BTCUSDT</option>
+        <option value="ETHUSDT">ETHUSDT</option>
+        <option value="BNBUSDT">BNBUSDT</option>
+        <option value="LTCUSDT">LTCUSDT</option>
+        <option value="TRXUSDT">TRXUSDT</option>
+        <option value="XRPUSDT">XRPUSDT</option>
+        <option value="ADAUSDT">ADAUSDT</option>
+        <option value="DOGEUSDT">DOGEUSDT</option>
+        <option value="SOLUSDT">SOLUSDT</option>
+      </select>
+      <label for="bot-quantidade">Qtd:</label>
+      <input id="bot-quantidade" value="0.001" style="width:70px" type="number" min="0.0001" step="any" required aria-label="Quantidade">
+      <label for="bot-queda">Queda %:</label>
+      <input id="bot-queda" value="0.15" style="width:60px" type="number" min="0.01" step="any" required aria-label="Queda percentual">
+      <label for="bot-alta">Alta %:</label>
+      <input id="bot-alta" value="0.20" style="width:60px" type="number" min="0.01" step="any" required aria-label="Alta percentual">
+      <label for="bot-intervalo">Intervalo (s):</label>
+      <input id="bot-intervalo" value="10" style="width:60px" type="number" min="1" step="1" required aria-label="Intervalo em segundos">
+      <label for="bot-stoploss">Stop Loss %:</label>
+      <input id="bot-stoploss" value="2" style="width:60px" type="number" min="0.01" step="any" required aria-label="Stop Loss percentual">
+      <label for="bot-limite-diario">Limite diário:</label>
+      <input id="bot-limite-diario" value="10" style="width:60px" type="number" min="1" step="1" required aria-label="Limite diário de operações">
+      <label for="bot-max-op">Máx. por operação %:</label>
+      <input id="bot-max-op" value="20" style="width:60px" type="number" min="1" max="100" step="1" required aria-label="Máximo por operação">
+      <label for="bot-lucro-fixo">Lucro fixo (USDT):</label>
+      <input id="bot-lucro-fixo" value="" style="width:80px" type="number" min="0.01" step="any" aria-label="Lucro fixo em USDT">
+      <label for="bot-prejuizo-fixo">Prejuízo fixo (USDT):</label>
+      <input id="bot-prejuizo-fixo" value="" style="width:80px" type="number" min="0.01" step="any" aria-label="Prejuízo fixo em USDT">
+      <div style="width:100%; display:flex; gap:12px; justify-content:flex-start; margin-top:8px;">
+        <button class="btn btn-compra" onclick="iniciarBot()" id="iniciar-bot-btn" tabindex="0">Iniciar Bot</button>
+        <button class="btn btn-venda" onclick="pararBot()" tabindex="0">Parar Bot</button>
+      </div>
+    </div>
+
+    <div class="painel-info" style="margin-bottom:12px;">
+      <div class="info-bloco">
+        <span>Lucro</span>
+        <strong id="lucro-total">--</strong>
+      </div>
+      <div class="info-bloco">
+        <span>Prejuízo</span>
+        <strong id="prejuizo-total">--</strong>
+      </div>
+      <!-- Botão de reset -->
+      <button id="reset-lucro-btn" class="btn" style="height:40px;align-self:center;">Resetar Lucro/Prejuízo</button>
+    </div>
+
+    <div style="margin-bottom:12px;">
+      <button id="toggle-saldo-btn" class="btn">Mostrar/Esconder Saldo por Ativo</button>
+      <button id="vender-todos-btn" class="btn btn-venda" style="margin-left:8px;">Vender Todos</button>
+      <span id="lucro-prejuizo-todos" style="margin-left:16px;font-weight:bold;"></span>
+    </div>
+    <div id="painel-saldo" style="margin-bottom:12px;"></div>
+
+    <div id="pares-ativos" style="margin:10px 0; font-weight:bold;">
+      Pares operando: <span id="lista-pares-ativos">Nenhum</span>
+    </div>
+
+    <h4>Ordens abertas</h4>
+    <div id="painel-ordens"></div>
+
+    <h4>Histórico de Trades (Testnet)</h4>
+    <div id="painel-trades"></div>
+  </div>
+
+  <!-- Popup do slider -->
+  <div id="slider-popup" class="slider-popup" style="display:none;">
+    <div class="slider-box">
+      <button class="close-slider" onclick="fecharSlider()">&times;</button>
+      <h3>Vender <span id="slider-ativo"></span></h3>
+      <span class="slider-value" id="slider-value"></span>
+      <input type="range" min="0" max="1" step="0.0001" value="0" class="slider" id="slider-range" oninput="atualizarSliderValor()">
+      <div style="margin-top:18px;">
+        <button class="btn btn-venda" onclick="confirmarVendaSlider()">Confirmar Venda</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Lista de pares suportados na Binance Testnet
+    const paresTestnet = [
+      'BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'LTCUSDT', 'TRXUSDT', 'XRPUSDT', 'ADAUSDT', 'DOGEUSDT', 'SOLUSDT'
+      // Adicione outros pares testnet conforme necessário
+    ];
+
+    function parTestnetValido(symbol) {
+      return paresTestnet.includes(symbol);
+    }
+
+    let saldoAtivos = [];
+    let sliderAtivo = '';
+    let sliderMax = 0;
+    let saldoColapsado = false;
+
+    async function comprar() {
+      const symbol = document.getElementById('symbol').value.trim().toUpperCase();
+      const quantity = parseFloat(document.getElementById('quantity').value);
+      if (!symbol || !quantity || quantity <= 0) {
+        alert('Preencha o par e a quantidade corretamente!');
+        return;
+      }
+      try {
+        const res = await fetch('http://localhost:3000/binance/comprar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ symbol, quantity })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById('mensagem').innerText = 'Compra enviada!\n' + JSON.stringify(data, null, 2);
+        } else {
+          document.getElementById('mensagem').innerText = 'Erro ao comprar: ' + (data.error || JSON.stringify(data));
+        }
+      } catch (e) {
+        document.getElementById('mensagem').innerText = 'Erro de conexão com o backend.';
+      }
+      atualizarSaldo();
+      atualizarOrdens();
+      atualizarTrades();
+    }
+
+    async function vender() {
+      const symbol = document.getElementById('symbol').value.trim().toUpperCase();
+      const quantity = parseFloat(document.getElementById('quantity').value);
+      if (!symbol || !quantity || quantity <= 0) {
+        alert('Preencha o par e a quantidade corretamente!');
+        return;
+      }
+      try {
+        const res = await fetch('http://localhost:3000/binance/vender', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ symbol, quantity })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById('mensagem').innerText = 'Venda enviada!\n' + JSON.stringify(data, null, 2);
+        } else {
+          document.getElementById('mensagem').innerText = 'Erro ao vender: ' + (data.error || JSON.stringify(data));
+        }
+      } catch (e) {
+        document.getElementById('mensagem').innerText = 'Erro de conexão com o backend.';
+      }
+      atualizarSaldo();
+      atualizarOrdens();
+      atualizarTrades();
+    }
+
+    // Slider de venda por ativo
+    function abrirSlider(ativo, max) {
+      sliderAtivo = ativo;
+      sliderMax = parseFloat(max);
+      document.getElementById('slider-ativo').innerText = ativo;
+      document.getElementById('slider-range').max = sliderMax;
+      document.getElementById('slider-range').value = sliderMax;
+      document.getElementById('slider-value').innerText = sliderMax + ' ' + ativo;
+      document.getElementById('slider-popup').style.display = 'flex';
+    }
+    function fecharSlider() {
+      document.getElementById('slider-popup').style.display = 'none';
+    }
+    function atualizarSliderValor() {
+      const val = parseFloat(document.getElementById('slider-range').value);
+      document.getElementById('slider-value').innerText = val + ' ' + sliderAtivo;
+    }
+    async function confirmarVendaSlider() {
+      const quantidade = parseFloat(document.getElementById('slider-range').value);
+      if (!quantidade || quantidade <= 0) {
+        alert('Selecione uma quantidade válida!');
+        return;
+      }
+      const symbol = sliderAtivo + 'USDT';
+      try {
+        const res = await fetch('http://localhost:3000/binance/vender', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ symbol, quantity: quantidade })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById('mensagem').innerText = 'Venda enviada!\n' + JSON.stringify(data, null, 2);
+        } else {
+          document.getElementById('mensagem').innerText = 'Erro ao vender: ' + (data.error || JSON.stringify(data));
+        }
+      } catch (e) {
+        document.getElementById('mensagem').innerText = 'Erro de conexão com o backend.';
+      }
+      fecharSlider();
+      atualizarSaldo();
+      atualizarOrdens();
+      atualizarTrades();
+    }
+
+    async function atualizarSaldo() {
+      try {
+        const res = await fetch('http://localhost:3000/binance/saldo');
+        const saldo = await res.json();
+        saldoAtivos = saldo.filter(s => parseFloat(s.free) > 0 && s.asset !== 'USDT');
+        let html = '';
+        if (!saldoColapsado) {
+          html += '<table><tr><th>Moeda</th><th>Disponível</th><th>Ações</th></tr>';
+          saldo.forEach(s => {
+            if (parseFloat(s.free) > 0) {
+              html += `<tr>
+                <td>${s.asset}</td>
+                <td>${s.free}</td>
+                <td>${
+                  s.asset !== 'USDT'
+                    ? `<button class="btn btn-venda" onclick="abrirSlider('${s.asset}', '${s.free}')">Vender</button>`
+                    : ''
+                }</td>
+              </tr>`;
+            }
+          });
+          html += '</table>';
+        }
+        document.getElementById('painel-saldo').innerHTML = html;
+        calcularLucroPrejuizoTodos();
+        document.getElementById('saldo-usdt').innerText = saldo.find(s => s.asset === 'USDT')?.free || '--';
+        document.getElementById('ativos-qtd').innerText = saldoAtivos.length;
+      } catch {
+        document.getElementById('painel-saldo').innerHTML = '<i>Erro ao carregar saldo.</i>';
+      }
+    }
+
+    async function atualizarOrdens() {
+      try {
+        const res = await fetch('http://localhost:3000/binance/ordens');
+        const ordens = await res.json();
+        let html = '';
+        if (ordens.length === 0) {
+          html = '<i>Nenhuma ordem aberta.</i>';
+        } else {
+          html += '<table><tr><th>Symbol</th><th>Side</th><th>Qtd</th><th>Status</th></tr>';
+          ordens.forEach(o => {
+            html += `<tr>
+              <td>${o.symbol}</td>
+              <td>${o.side}</td>
+              <td>${o.origQty}</td>
+              <td>${o.status}</td>
+            </tr>`;
+          });
+          html += '</table>';
+        }
+        document.getElementById('painel-ordens').innerHTML = html;
+      } catch {
+        document.getElementById('painel-ordens').innerHTML = '<i>Erro ao carregar ordens.</i>';
+      }
+    }
+
+    async function atualizarTrades() {
+      try {
+        const res = await fetch('http://localhost:3000/trades');
+        const trades = await res.json();
+        let html = '';
+        if (!trades.length) {
+          html = '<i>Nenhuma trade registrada.</i>';
+        } else {
+          html += '<table><tr><th>ID</th><th>Tipo</th><th>Par</th><th>Valor</th><th>Qtd</th><th>Data</th></tr>';
+          trades.forEach(t => {
+            html += `<tr>
+              <td>${t.id}</td>
+              <td>${t.tipo}</td>
+              <td>${t.acao}</td>
+              <td>${t.valor}</td>
+              <td>${t.quantidade}</td>
+              <td>${new Date(t.data).toLocaleString()}</td>
+            </tr>`;
+          });
+          html += '</table>';
+        }
+        document.getElementById('painel-trades').innerHTML = html;
+      } catch {
+        document.getElementById('painel-trades').innerHTML = '<i>Erro ao carregar trades.</i>';
+      }
+    }
+
+    async function atualizarStatusBot() {
+      try {
+        const res = await fetch('http://localhost:3000/status');
+        const data = await res.json();
+        const el = document.getElementById('bot-status');
+        if (data.status === 'ok') {
+          el.innerText = 'Online';
+          el.className = 'ativo';
+        } else {
+          el.innerText = 'Offline';
+          el.className = 'inativo';
+        }
+      } catch {
+        const el = document.getElementById('bot-status');
+        el.innerText = 'Offline';
+        el.className = 'inativo';
+      }
+    }
+
+    async function iniciarBot() {
+      const btn = document.getElementById('iniciar-bot-btn');
+      btn.disabled = true;
+      const acoesSelect = document.getElementById('acoes-select');
+      const pares = Array.from(acoesSelect.selectedOptions).map(opt => opt.value);
+      const quantidade = parseFloat(document.getElementById('bot-quantidade').value);
+      const queda = parseFloat(document.getElementById('bot-queda').value);
+      const alta = parseFloat(document.getElementById('bot-alta').value);
+      const intervalo = parseInt(document.getElementById('bot-intervalo').value) * 1000;
+      const stopLossPercent = parseFloat(document.getElementById('bot-stoploss').value);
+      const limiteDiario = parseInt(document.getElementById('bot-limite-diario').value);
+      const maxPorOperacaoPercent = parseFloat(document.getElementById('bot-max-op').value);
+      const lucroFixo = parseFloat(document.getElementById('bot-lucro-fixo').value);
+      const prejuizoFixo = parseFloat(document.getElementById('bot-prejuizo-fixo').value);
+
+      // Validação aprimorada
+      if (!pares.length) {
+        document.getElementById('mensagem').innerText = 'Selecione pelo menos um par de ações!';
+        btn.disabled = false;
+        return;
+      }
+      if (!quantidade || quantidade <= 0) {
+        document.getElementById('mensagem').innerText = 'Informe uma quantidade válida!';
+        btn.disabled = false;
+        return;
+      }
+      if (!queda || queda <= 0) {
+        document.getElementById('mensagem').innerText = 'Informe uma queda (%) válida!';
+        btn.disabled = false;
+        return;
+      }
+      if (!alta || alta <= 0) {
+        document.getElementById('mensagem').innerText = 'Informe uma alta (%) válida!';
+        btn.disabled = false;
+        return;
+      }
+      if (!intervalo || intervalo < 1000) {
+        document.getElementById('mensagem').innerText = 'Informe um intervalo em segundos válido!';
+        btn.disabled = false;
+        return;
+      }
+
+      try {
+        const res = await fetch('http://localhost:3000/iniciar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            quantidade, queda, alta, intervalo,
+            stopLossPercent, limiteDiario, maxPorOperacaoPercent,
+            lucroFixo, prejuizoFixo, // NOVOS CAMPOS
+            pares
+          })
+        });
+        const data = await res.json();
+        document.getElementById('mensagem').innerText = data.status || 'Bot iniciado!';
+        atualizarStatusBot();
+      } catch {
+        document.getElementById('mensagem').innerText = 'Erro ao iniciar o bot!';
+      }
+      btn.disabled = false;
+    }
+    async function pararBot() {
+      const res = await fetch('http://localhost:3000/parar', { method: 'POST' });
+      const data = await res.json();
+      document.getElementById('mensagem').innerText = data.status || 'Bot parado!';
+      atualizarStatusBot();
+    }
+
+    async function atualizarFinanceiro() {
+      try {
+        const res = await fetch('http://localhost:3000/financeiro');
+        const data = await res.json();
+        document.getElementById('lucro-total').innerText = 'R$ ' + Number(data.lucro).toFixed(2);
+        document.getElementById('prejuizo-total').innerText = 'R$ ' + Number(data.prejuizo).toFixed(2);
+      } catch {
+        document.getElementById('lucro-total').innerText = '--';
+        document.getElementById('prejuizo-total').innerText = '--';
+      }
+    }
+
+    async function getPrecoMercado(symbol) {
+      try {
+        const res = await fetch(`https://testnet.binance.vision/api/v3/ticker/price?symbol=${symbol}`);
+        const data = await res.json();
+        return parseFloat(data.price);
+      } catch {
+        return null;
+      }
+    }
+
+    async function calcularLucroPrejuizoTodos() {
+      try {
+        const resTrades = await fetch('http://localhost:3000/trades');
+        const trades = await resTrades.json();
+        let totalLucro = 0, totalPrejuizo = 0;
+        const promessas = saldoAtivos.map(async ativo => {
+          const compras = trades.filter(t => t.acao === ativo.asset && t.tipo === 'COMPRA');
+          let qtdComprada = compras.reduce((acc, t) => acc + t.quantidade, 0);
+          let qtdAtual = parseFloat(ativo.free);
+          let precoMedio = qtdComprada > 0 ? compras.reduce((acc, t) => acc + t.valor * t.quantidade, 0) / qtdComprada : 0;
+          const symbol = ativo.asset + 'USDT';
+          if (!parTestnetValido(symbol)) return;
+          const precoMercado = await getPrecoMercado(symbol) || precoMedio;
+          const resultado = (precoMercado - precoMedio) * qtdAtual;
+          if (resultado >= 0) totalLucro += resultado;
+          else totalPrejuizo += Math.abs(resultado);
+        });
+        await Promise.all(promessas);
+        let texto = '';
+        if (totalLucro > 0) texto += `Lucro estimado: R$ ${totalLucro.toFixed(2)} `;
+        if (totalPrejuizo > 0) texto += `Prejuízo estimado: R$ ${totalPrejuizo.toFixed(2)}`;
+        document.getElementById('lucro-prejuizo-todos').innerText = texto || '';
+      } catch {
+        document.getElementById('lucro-prejuizo-todos').innerText = '';
+      }
+    }
+
+    document.getElementById('toggle-saldo-btn').onclick = function() {
+      saldoColapsado = !saldoColapsado;
+      atualizarSaldo();
+    };
+
+    document.getElementById('vender-todos-btn').onclick = async function() {
+      if (!saldoAtivos.length) {
+        alert('Nenhum ativo para vender.');
+        return;
+      }
+      if (!confirm('Deseja vender TODOS os ativos?')) return;
+      for (const ativo of saldoAtivos) {
+        const symbol = ativo.asset + 'USDT';
+        const quantidade = parseFloat(ativo.free);
+        if (!parTestnetValido(symbol)) continue; // pula ativos não suportados
+        if (quantidade > 0) {
+          try {
+            const res = await fetch('http://localhost:3000/binance/vender', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ symbol, quantity: quantidade })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+              alert(`Erro ao vender ${ativo.asset}: ` + (data.error || JSON.stringify(data)));
+            }
+          } catch (e) {
+            alert(`Erro de conexão ao vender ${ativo.asset}.`);
+          }
+        }
+      }
+      setTimeout(() => {
+        atualizarSaldo();
+        calcularLucroPrejuizoTodos();
+      }, 1500);
+    };
+
+    // Atualização automática
+    setInterval(() => {
+      atualizarSaldo();
+      calcularLucroPrejuizoTodos();
+    }, 5000);
+    atualizarSaldo();
+    calcularLucroPrejuizoTodos();
+    setInterval(atualizarFinanceiro, 5000);
+    atualizarFinanceiro();
+
+    // Resetar lucro/prejuízo
+    document.getElementById('reset-lucro-btn').onclick = async function() {
+      if (!confirm('Tem certeza que deseja resetar o lucro/prejuízo?')) return;
+      try {
+        const res = await fetch('http://localhost:3000/resetar-lucro', { method: 'POST' });
+        const data = await res.json();
+        document.getElementById('mensagem').innerText = data.status || 'Lucro/prejuízo resetado!';
+        atualizarFinanceiro();
+      } catch {
+        document.getElementById('mensagem').innerText = 'Erro ao resetar lucro/prejuízo!';
+      }
+    }
+  </script>
+</body>
+</html>
